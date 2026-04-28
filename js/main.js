@@ -1,10 +1,10 @@
-// UJ Campus Finder — Main JS
+﻿// UJ Campus Finder — Main JS
 
 document.addEventListener("DOMContentLoaded", () => {
 
     // ---- Mobile nav toggle ----
     const toggle = document.getElementById("navToggle");
-    const links  = document.getElementById("navLinks");
+    const links = document.getElementById("navLinks");
 
     if (toggle && links) {
         toggle.addEventListener("click", () => {
@@ -46,15 +46,15 @@ function validateField({ id, label, validate, minLen }) {
     const el = document.getElementById(id);
     if (!el) return '';
     const v = el.value.trim();
-    if (!v)                          return `${label} is required.`;
+    if (!v) return `${label} is required.`;
     if (minLen && v.length < minLen) return `${label} must be at least ${minLen} characters.`;
-    if (validate)                    return validate(v);
+    if (validate) return validate(v);
     return '';
 }
 
 /** Apply error / success / neutral visual state to one field. */
 function applyFieldState(field, msg) {
-    const el  = document.getElementById(field.id);
+    const el = document.getElementById(field.id);
     const err = document.getElementById(field.errId);
     if (!el || !err) return;
     if (msg) {
@@ -105,7 +105,7 @@ function attachLiveValidation(fields, btn) {
 
         el.addEventListener('blur', () => {
             const hasValue = el.value.trim().length > 0;
-            const wasOk    = el.classList.contains('is-ok');
+            const wasOk = el.classList.contains('is-ok');
             // Skip showing "required" on a first-ever empty blur
             if (!hasValue && !wasOk && !touched) return;
             touched = true;
@@ -146,9 +146,10 @@ function autoUppercase(id) {
 function setLoading(btn, loading, originalLabel) {
     if (loading) {
         btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting…';
-        btn.disabled  = true;
+        btn.disabled = true;
     } else {
         btn.innerHTML = originalLabel;
+        btn.disabled = false;
     }
 }
 
@@ -164,7 +165,7 @@ function showPageToast(toastId, msg) {
 
 /* ---- Claim form ---- */
 function initClaimForm() {
-    const form      = document.getElementById('claimForm');
+    const form = document.getElementById('claimForm');
     const submitBtn = document.getElementById('claimSubmitBtn');
     const successEl = document.getElementById('claimSuccessMsg');
     if (!form || !submitBtn) return;
@@ -202,7 +203,8 @@ function initClaimForm() {
 
     const originalLabel = submitBtn.innerHTML;
 
-    submitBtn.addEventListener('click', () => {
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
         if (!runFormValidation(FIELDS)) return;
 
         setLoading(submitBtn, true, originalLabel);
@@ -216,7 +218,7 @@ function initClaimForm() {
 
 /* ---- Contact form ---- */
 function initContactForm() {
-    const form      = document.getElementById('contactForm');
+    const form = document.getElementById('contactForm');
     const submitBtn = document.getElementById('contactSubmitBtn');
     if (!form || !submitBtn) return;
 
@@ -238,7 +240,8 @@ function initContactForm() {
 
     const originalLabel = submitBtn.innerHTML;
 
-    submitBtn.addEventListener('click', () => {
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
         if (!runFormValidation(FIELDS)) return;
 
         setLoading(submitBtn, true, originalLabel);
@@ -246,14 +249,14 @@ function initContactForm() {
         setTimeout(() => {
             form.reset();
             FIELDS.forEach(({ id, errId }) => {
-                const el  = document.getElementById(id);
+                const el = document.getElementById(id);
                 const err = document.getElementById(errId);
-                if (el)  el.classList.remove('is-err', 'is-ok');
+                if (el) el.classList.remove('is-err', 'is-ok');
                 if (err) err.textContent = '';
             });
             setLoading(submitBtn, false, originalLabel);
             submitBtn.disabled = true;
-            showPageToast('contactToast', "Message sent! We’ll get back to you soon.");
+            showPageToast('contactToast', "Message sent! We'll get back to you soon.");
         }, 900);
     });
 }
@@ -264,6 +267,20 @@ function initContactForm() {
 (function () {
 
     /* ---- Mock report data ---- */
+    /* DATA SOURCE
+     * ACTIVE_DATA is the single reference used by all rendering and filter
+     * logic.  It starts as MOCK_REPORTS (in-memory fallback).
+     *
+     * To switch to the database later, replace the assignment below with
+     * the result of your API fetch — e.g.:
+     *
+     *   fetch('/api/reports')
+     *     .then(r => r.json())
+     *     .then(data => { ACTIVE_DATA = Array.isArray(data) && data.length ? data : MOCK_REPORTS; renderReports(); })
+     *     .catch(() => renderReports());
+     *
+     * Until then, nothing below this comment needs to change.
+     */
     const MOCK_REPORTS = [
         {
             id: 'RPT-2026-001',
@@ -355,6 +372,8 @@ function initContactForm() {
         }
     ];
 
+    let ACTIVE_DATA = MOCK_REPORTS;
+
     /* ---- Format date as "22 Apr 2026" ---- */
     function fmtDate(dateStr) {
         const d = new Date(dateStr + 'T00:00:00');
@@ -414,26 +433,26 @@ function initContactForm() {
     function getFilters() {
         const typeEl = document.querySelector('input[name="filterType"]:checked');
         const locEls = [...document.querySelectorAll('input[name="filterLoc"]:checked')];
-        const stEls  = [...document.querySelectorAll('input[name="filterStatus"]:checked')];
+        const stEls = [...document.querySelectorAll('input[name="filterStatus"]:checked')];
         const searchEl = document.getElementById('searchInput');
-        const sortEl   = document.getElementById('sortSelect');
+        const sortEl = document.getElementById('sortSelect');
         return {
-            type:   typeEl ? typeEl.value : 'all',
-            locs:   locEls.map(el => el.value),
+            type: typeEl ? typeEl.value : 'all',
+            locs: locEls.map(el => el.value),
             statuses: stEls.map(el => el.value),
             search: searchEl ? searchEl.value.toLowerCase().trim() : '',
-            sort:   sortEl ? sortEl.value : 'newest'
+            sort: sortEl ? sortEl.value : 'newest'
         };
     }
 
     /* ---- Filter + sort reports ---- */
     function filterReports() {
         const f = getFilters();
-        let list = [...MOCK_REPORTS];
+        let list = [...ACTIVE_DATA];
 
-        if (f.type !== 'all')      list = list.filter(r => r.type === f.type);
-        if (f.locs.length)         list = list.filter(r => f.locs.includes(r.location));
-        if (f.statuses.length)     list = list.filter(r => f.statuses.includes(r.status));
+        if (f.type !== 'all') list = list.filter(r => r.type === f.type);
+        if (f.locs.length) list = list.filter(r => f.locs.includes(r.location));
+        if (f.statuses.length) list = list.filter(r => f.statuses.includes(r.status));
         if (f.search) {
             list = list.filter(r => {
                 const hay = (r.title + ' ' + r.desc + ' ' + r.location + ' ' + r.reporter).toLowerCase();
@@ -443,16 +462,16 @@ function initContactForm() {
 
         switch (f.sort) {
             case 'oldest': list.sort((a, b) => a.date.localeCompare(b.date)); break;
-            case 'az':     list.sort((a, b) => a.title.localeCompare(b.title)); break;
-            case 'za':     list.sort((a, b) => b.title.localeCompare(a.title)); break;
-            default:       list.sort((a, b) => b.date.localeCompare(a.date)); break;
+            case 'az': list.sort((a, b) => a.title.localeCompare(b.title)); break;
+            case 'za': list.sort((a, b) => b.title.localeCompare(a.title)); break;
+            default: list.sort((a, b) => b.date.localeCompare(a.date)); break;
         }
         return list;
     }
 
     /* ---- Render report cards ---- */
     function renderReports() {
-        const grid    = document.getElementById('reportsGrid');
+        const grid = document.getElementById('reportsGrid');
         const countEl = document.getElementById('rptCount');
         const emptyEl = document.getElementById('rptEmpty');
         if (!grid) return;
@@ -499,19 +518,19 @@ function initContactForm() {
 
     /* ---- Modal logic ---- */
     function initModal() {
-        const overlay    = document.getElementById('reportModal');
-        const closeBtn   = document.getElementById('modalClose');
-        const cancelBtn  = document.getElementById('modalCancel');
-        const submitBtn  = document.getElementById('submitReport');
-        const btnLost    = document.getElementById('btnReportLost');
-        const btnFound   = document.getElementById('btnReportFound');
-        const typeSel    = document.getElementById('typeSelector');
+        const overlay = document.getElementById('reportModal');
+        const closeBtn = document.getElementById('modalClose');
+        const cancelBtn = document.getElementById('modalCancel');
+        const submitBtn = document.getElementById('submitReport');
+        const btnLost = document.getElementById('btnReportLost');
+        const btnFound = document.getElementById('btnReportFound');
+        const typeSel = document.getElementById('typeSelector');
         const typeHidden = document.getElementById('reportType');
         const photoPickBtn = document.getElementById('photoPickBtn');
-        const photoInput   = document.getElementById('fItemPhoto');
-        const photoName    = document.getElementById('photoFileName');
+        const photoInput = document.getElementById('fItemPhoto');
+        const photoName = document.getElementById('photoFileName');
         const photoPreview = document.getElementById('photoPreview');
-        const dateInput    = document.getElementById('fItemDate');
+        const dateInput = document.getElementById('fItemDate');
 
         if (!overlay) return;
 
@@ -522,7 +541,7 @@ function initContactForm() {
             const m = String(today.getMonth() + 1).padStart(2, '0');
             const d = String(today.getDate()).padStart(2, '0');
             dateInput.value = `${y}-${m}-${d}`;
-            dateInput.max   = `${y}-${m}-${d}`;
+            dateInput.max = `${y}-${m}-${d}`;
         }
 
         const openModal = (type) => {
@@ -578,20 +597,20 @@ function initContactForm() {
 
         /* Validation fields config */
         const FIELDS = [
-            { id: 'fItemTitle',   errId: 'errItemTitle',   label: 'Item name' },
-            { id: 'fItemLoc',     errId: 'errItemLoc',     label: 'Location' },
-            { id: 'fItemDate',    errId: 'errItemDate',    label: 'Date' },
-            { id: 'fItemDesc',    errId: 'errItemDesc',    label: 'Description' },
-            { id: 'fRepName',     errId: 'errRepName',     label: 'Your name' },
-            { id: 'fRepContact',  errId: 'errRepContact',  label: 'Contact info' }
+            { id: 'fItemTitle', errId: 'errItemTitle', label: 'Item name' },
+            { id: 'fItemLoc', errId: 'errItemLoc', label: 'Location' },
+            { id: 'fItemDate', errId: 'errItemDate', label: 'Date' },
+            { id: 'fItemDesc', errId: 'errItemDesc', label: 'Description' },
+            { id: 'fRepName', errId: 'errRepName', label: 'Your name' },
+            { id: 'fRepContact', errId: 'errRepContact', label: 'Contact info' }
         ];
 
         /* Clear form helper */
         function clearForm() {
             FIELDS.forEach(({ id, errId }) => {
-                const el  = document.getElementById(id);
+                const el = document.getElementById(id);
                 const err = document.getElementById(errId);
-                if (el)  { el.value = ''; el.classList.remove('is-err'); }
+                if (el) { el.value = ''; el.classList.remove('is-err'); }
                 if (err) err.textContent = '';
             });
             if (photoPreview) { photoPreview.src = ''; photoPreview.hidden = true; }
@@ -611,7 +630,7 @@ function initContactForm() {
         submitBtn?.addEventListener('click', () => {
             let valid = true;
             FIELDS.forEach(({ id, errId, label }) => {
-                const el  = document.getElementById(id);
+                const el = document.getElementById(id);
                 const err = document.getElementById(errId);
                 if (!el || !err) return;
                 if (!el.value.trim()) {
@@ -627,14 +646,14 @@ function initContactForm() {
 
             /* Build new report and prepend to mock data */
             const newReport = {
-                id:       `RPT-2026-${String(MOCK_REPORTS.length + 1).padStart(3, '0')}`,
-                type:     typeHidden ? typeHidden.value : 'lost',
-                title:    document.getElementById('fItemTitle').value.trim(),
+                id: `RPT-2026-${String(MOCK_REPORTS.length + 1).padStart(3, '0')}`,
+                type: typeHidden ? typeHidden.value : 'lost',
+                title: document.getElementById('fItemTitle').value.trim(),
                 location: document.getElementById('fItemLoc').value,
-                date:     document.getElementById('fItemDate').value,
-                desc:     document.getElementById('fItemDesc').value.trim(),
+                date: document.getElementById('fItemDate').value,
+                desc: document.getElementById('fItemDesc').value.trim(),
                 reporter: document.getElementById('fRepName').value.trim(),
-                status:   'active'
+                status: 'active'
             };
             MOCK_REPORTS.unshift(newReport);
 
@@ -646,7 +665,7 @@ function initContactForm() {
 
         /* Live validation: clear error as user types */
         FIELDS.forEach(({ id, errId }) => {
-            const el  = document.getElementById(id);
+            const el = document.getElementById(id);
             const err = document.getElementById(errId);
             if (!el || !err) return;
             el.addEventListener('input', () => {
@@ -684,7 +703,7 @@ function initContactForm() {
         grid.addEventListener('click', (e) => {
             const btn = e.target.closest('.rcard-btn--view');
             if (!btn) return;
-            
+
             const rId = btn.dataset.id;
             const report = MOCK_REPORTS.find(r => r.id === rId);
             if (!report) return;
@@ -736,7 +755,7 @@ function initContactForm() {
         document.getElementById('sortSelect')?.addEventListener('change', renderReports);
 
         /* View toggle */
-        const grid    = document.getElementById('reportsGrid');
+        const grid = document.getElementById('reportsGrid');
         const btnGrid = document.getElementById('btnGrid');
         const btnList = document.getElementById('btnList');
         btnGrid?.addEventListener('click', () => {
@@ -771,6 +790,7 @@ function initContactForm() {
                 inputEl.style.backgroundColor = 'var(--color-bg)';
                 inputEl.style.color = 'var(--color-text-muted)';
                 inputEl.style.cursor = 'not-allowed';
+                inputEl.dispatchEvent(new Event('input'));
             }
         }
     }
