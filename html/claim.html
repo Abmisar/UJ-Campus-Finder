@@ -53,42 +53,74 @@
         <!-- ===== CLAIM FORM SECTION ===== -->
         <section class="container page-section">
             <div class="form-card">
-                <form id="claimForm">
+                <!-- Success panel: hidden until submission -->
+                <div class="form-success-msg" id="claimSuccessMsg" hidden>
+                    <div class="form-success-msg__icon">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <h2 class="form-success-msg__title">Claim Submitted!</h2>
+                    <p class="form-success-msg__desc">Your claim has been received. Our team will review it and contact you at the email address you provided within 24 hours.</p>
+                </div>
+
+                <form id="claimForm" novalidate>
                     <div class="fm-group">
                         <label class="fm-label" for="cReportId">Report ID <span class="fm-req">*</span></label>
-                        <input type="text" class="fm-ctrl" id="cReportId" placeholder="e.g. RPT-2026-001">
+                        <input type="text" class="fm-ctrl" id="cReportId" name="reportId"
+                               placeholder="e.g. RPT-2026-001" autocomplete="off"
+                               aria-describedby="errCReportId">
                         <p class="form-hint">You can find this ID on the found item's report card.</p>
+                        <span class="fm-err" id="errCReportId" aria-live="polite"></span>
                     </div>
 
                     <div class="fm-row">
                         <div class="fm-group">
                             <label class="fm-label" for="cName">Your Full Name <span class="fm-req">*</span></label>
-                            <input type="text" class="fm-ctrl" id="cName" placeholder="Name as per UJ ID">
+                            <input type="text" class="fm-ctrl" id="cName" name="fullName"
+                                   placeholder="Name as per UJ ID" autocomplete="name"
+                                   maxlength="60"
+                                   aria-describedby="errCName">
+                            <span class="fm-err" id="errCName" aria-live="polite"></span>
                         </div>
                         <div class="fm-group">
                             <label class="fm-label" for="cStudentId">Student/Staff ID <span class="fm-req">*</span></label>
-                            <input type="text" class="fm-ctrl" id="cStudentId" placeholder="e.g. 1912345">
+                            <input type="text" class="fm-ctrl" id="cStudentId" name="studentId"
+                                   placeholder="e.g. 1912345" autocomplete="off"
+                                   inputmode="numeric" maxlength="7" pattern="[0-9]{7}"
+                                   aria-describedby="errCStudentId">
+                            <span class="fm-err" id="errCStudentId" aria-live="polite"></span>
                         </div>
                     </div>
 
                     <div class="fm-row">
                         <div class="fm-group">
                             <label class="fm-label" for="cEmail">University Email <span class="fm-req">*</span></label>
-                            <input type="email" class="fm-ctrl" id="cEmail" placeholder="student@uj.edu.sa">
+                            <input type="email" class="fm-ctrl" id="cEmail" name="email"
+                                   placeholder="student@uj.edu.sa" autocomplete="email"
+                                   maxlength="100"
+                                   aria-describedby="errCEmail">
+                            <span class="fm-err" id="errCEmail" aria-live="polite"></span>
                         </div>
                         <div class="fm-group">
                             <label class="fm-label" for="cPhone">Phone Number <span class="fm-req">*</span></label>
-                            <input type="tel" class="fm-ctrl" id="cPhone" placeholder="05xxxxxxxx">
+                            <input type="tel" class="fm-ctrl" id="cPhone" name="phone"
+                                   placeholder="05xxxxxxxx" autocomplete="tel"
+                                   inputmode="numeric" maxlength="10" pattern="05[0-9]{8}"
+                                   aria-describedby="errCPhone">
+                            <span class="fm-err" id="errCPhone" aria-live="polite"></span>
                         </div>
                     </div>
 
                     <div class="fm-group">
                         <label class="fm-label" for="cProof">Proof of Ownership <span class="fm-req">*</span></label>
-                        <textarea class="fm-ctrl fm-textarea" id="cProof" rows="4" placeholder="Describe unique identifying features, serial numbers, password, or anything that proves this item belongs to you..."></textarea>
+                        <textarea class="fm-ctrl fm-textarea" id="cProof" name="proof" rows="4"
+                                  placeholder="Describe unique identifying features, serial numbers, password, or anything that proves this item belongs to you..."
+                                  minlength="20" maxlength="1000"
+                                  aria-describedby="errCProof"></textarea>
+                        <span class="fm-err" id="errCProof" aria-live="polite"></span>
                     </div>
 
-                    <div class="fm-group mt-2">
-                        <button class="btn btn--amber btn-full" type="button" onclick="alert('Claim request submitted successfully. We will contact you soon.')">
+                    <div class="fm-group">
+                        <button class="btn btn--amber btn-full" id="claimSubmitBtn" type="button" disabled>
                             <i class="fa-solid fa-paper-plane"></i> Submit Claim
                         </button>
                     </div>
@@ -98,6 +130,12 @@
 
     </main>
 
+    <!-- ===== TOAST ===== -->
+    <div class="rpt-toast" id="claimToast" role="alert" aria-live="polite">
+        <i class="fa-solid fa-circle-check"></i>
+        <span class="toast-msg">Claim submitted successfully!</span>
+    </div>
+
     <!-- ===== FOOTER ===== -->
     <footer class="footer">
         <div class="container">
@@ -105,6 +143,7 @@
         </div>
     </footer>
 
+    <script src="/js/validation.js"></script>
     <script src="/js/main.js"></script>
 </body>
 </html>

@@ -33,9 +33,230 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // TODO: handle claim form submission to POST /api/claims
-    // TODO: handle contact form submission to POST /api/contact
+    initClaimForm();
+    initContactForm();
 });
+
+/* ================================================
+   SHARED FORM UX UTILITIES
+   ================================================ */
+
+/** Validate one field silently; returns error message or '' for valid. */
+function validateField({ id, label, validate, minLen }) {
+    const el = document.getElementById(id);
+    if (!el) return '';
+    const v = el.value.trim();
+    if (!v)                          return `${label} is required.`;
+    if (minLen && v.length < minLen) return `${label} must be at least ${minLen} characters.`;
+    if (validate)                    return validate(v);
+    return '';
+}
+
+/** Apply error / success / neutral visual state to one field. */
+function applyFieldState(field, msg) {
+    const el  = document.getElementById(field.id);
+    const err = document.getElementById(field.errId);
+    if (!el || !err) return;
+    if (msg) {
+        err.textContent = msg;
+        el.classList.add('is-err');
+        el.classList.remove('is-ok');
+    } else if (el.value.trim()) {
+        err.textContent = '';
+        el.classList.remove('is-err');
+        el.classList.add('is-ok');
+    } else {
+        err.textContent = '';
+        el.classList.remove('is-err', 'is-ok');
+    }
+}
+
+/** Validate all fields and apply states. Returns true if all pass. */
+function runFormValidation(fields) {
+    let firstInvalid = null;
+    let allValid = true;
+    fields.forEach(field => {
+        const msg = validateField(field);
+        applyFieldState(field, msg);
+        if (msg && !firstInvalid) firstInvalid = document.getElementById(field.id);
+        if (msg) allValid = false;
+    });
+    if (firstInvalid) firstInvalid.focus();
+    return allValid;
+}
+
+/** Keep the submit button enabled only when every field currently passes. */
+function syncSubmitBtn(fields, btn) {
+    if (!btn) return;
+    btn.disabled = !fields.every(f => validateField(f) === '');
+}
+
+/**
+ * Attach real-time per-field validation:
+ *   blur  → validate after the first meaningful interaction
+ *   input → re-validate once the field has been touched or carries an error
+ * Both events also re-evaluate the submit button state.
+ */
+function attachLiveValidation(fields, btn) {
+    fields.forEach(field => {
+        const el = document.getElementById(field.id);
+        if (!el) return;
+        let touched = false;
+
+        el.addEventListener('blur', () => {
+            const hasValue = el.value.trim().length > 0;
+            const wasOk    = el.classList.contains('is-ok');
+            // Skip showing "required" on a first-ever empty blur
+            if (!hasValue && !wasOk && !touched) return;
+            touched = true;
+            applyFieldState(field, validateField(field));
+            syncSubmitBtn(fields, btn);
+        });
+
+        el.addEventListener('input', () => {
+            if (touched || el.classList.contains('is-err')) {
+                applyFieldState(field, validateField(field));
+            }
+            syncSubmitBtn(fields, btn);
+        });
+    });
+}
+
+/** Strip any non-digit characters as the user types. */
+function restrictToDigits(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+        const clean = el.value.replace(/\D/g, '');
+        if (el.value !== clean) el.value = clean;
+    });
+}
+
+/** Auto-convert input to uppercase as the user types. */
+function autoUppercase(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+        const up = el.value.toUpperCase();
+        if (el.value !== up) el.value = up;
+    });
+}
+
+/** Toggle the submit button into a loading / restored state. */
+function setLoading(btn, loading, originalLabel) {
+    if (loading) {
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting…';
+        btn.disabled  = true;
+    } else {
+        btn.innerHTML = originalLabel;
+    }
+}
+
+/** Show a page-level toast notification (reuses the .rpt-toast style). */
+function showPageToast(toastId, msg) {
+    const toast = document.getElementById(toastId);
+    if (!toast) return;
+    const span = toast.querySelector('.toast-msg');
+    if (span) span.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4200);
+}
+
+/* ---- Claim form ---- */
+function initClaimForm() {
+    const form      = document.getElementById('claimForm');
+    const submitBtn = document.getElementById('claimSubmitBtn');
+    const successEl = document.getElementById('claimSuccessMsg');
+    if (!form || !submitBtn) return;
+
+    autoUppercase('cReportId');
+    restrictToDigits('cStudentId');
+    restrictToDigits('cPhone');
+
+    const FIELDS = [
+        {
+            id: 'cReportId', errId: 'errCReportId', label: 'Report ID',
+            validate: v => isValidReportId(v) ? '' : 'Report ID must follow this format: RPT-2026-001.'
+        },
+        {
+            id: 'cName', errId: 'errCName', label: 'Full name',
+            validate: v => isValidName(v) ? '' : 'Name must contain letters only and be between 2 and 60 characters.'
+        },
+        {
+            id: 'cStudentId', errId: 'errCStudentId', label: 'Student/Staff ID',
+            validate: v => isValidStudentId(v) ? '' : 'Student/Staff ID must be exactly 7 digits.'
+        },
+        {
+            id: 'cEmail', errId: 'errCEmail', label: 'University email',
+            validate: v => isValidUJEmail(v) ? '' : 'Please use your University of Jeddah email address (@uj.edu.sa).'
+        },
+        {
+            id: 'cPhone', errId: 'errCPhone', label: 'Phone number',
+            validate: v => isValidPhone(v) ? '' : 'Phone number must start with 05 and contain exactly 10 digits.'
+        },
+        { id: 'cProof', errId: 'errCProof', label: 'Proof of ownership', minLen: 20 }
+    ];
+
+    submitBtn.disabled = true;
+    attachLiveValidation(FIELDS, submitBtn);
+
+    const originalLabel = submitBtn.innerHTML;
+
+    submitBtn.addEventListener('click', () => {
+        if (!runFormValidation(FIELDS)) return;
+
+        setLoading(submitBtn, true, originalLabel);
+
+        setTimeout(() => {
+            form.hidden = true;
+            if (successEl) successEl.hidden = false;
+        }, 900);
+    });
+}
+
+/* ---- Contact form ---- */
+function initContactForm() {
+    const form      = document.getElementById('contactForm');
+    const submitBtn = document.getElementById('contactSubmitBtn');
+    if (!form || !submitBtn) return;
+
+    const FIELDS = [
+        {
+            id: 'ctName', errId: 'errCtName', label: 'Full name',
+            validate: v => isValidName(v) ? '' : 'Name must contain letters only and be between 2 and 60 characters.'
+        },
+        {
+            id: 'ctEmail', errId: 'errCtEmail', label: 'Email address',
+            validate: v => isValidEmail(v) ? '' : 'Enter a valid email address.'
+        },
+        { id: 'ctSubject', errId: 'errCtSubject', label: 'Subject', minLen: 3 },
+        { id: 'ctMessage', errId: 'errCtMessage', label: 'Message', minLen: 10 }
+    ];
+
+    submitBtn.disabled = true;
+    attachLiveValidation(FIELDS, submitBtn);
+
+    const originalLabel = submitBtn.innerHTML;
+
+    submitBtn.addEventListener('click', () => {
+        if (!runFormValidation(FIELDS)) return;
+
+        setLoading(submitBtn, true, originalLabel);
+
+        setTimeout(() => {
+            form.reset();
+            FIELDS.forEach(({ id, errId }) => {
+                const el  = document.getElementById(id);
+                const err = document.getElementById(errId);
+                if (el)  el.classList.remove('is-err', 'is-ok');
+                if (err) err.textContent = '';
+            });
+            setLoading(submitBtn, false, originalLabel);
+            submitBtn.disabled = true;
+            showPageToast('contactToast', "Message sent! We’ll get back to you soon.");
+        }, 900);
+    });
+}
 
 // =====================================================
 // REPORTS PAGE — mock data + interactive UI
@@ -471,23 +692,23 @@ document.addEventListener("DOMContentLoaded", () => {
             // Populate body
             bodyEl.innerHTML = `
                 <div style="margin-bottom: 1rem;">
-                    <strong style="color: var(--text-color);"><i class="fa-solid fa-tag"></i> Item Name:</strong> ${report.title}
+                    <strong style="color: var(--color-text);"><i class="fa-solid fa-tag"></i> Item Name:</strong> ${report.title}
                 </div>
                 <div style="margin-bottom: 1rem;">
-                    <strong style="color: var(--text-color);"><i class="fa-solid fa-location-dot"></i> Location:</strong> ${report.location}
+                    <strong style="color: var(--color-text);"><i class="fa-solid fa-location-dot"></i> Location:</strong> ${report.location}
                 </div>
                 <div style="margin-bottom: 1rem;">
-                    <strong style="color: var(--text-color);"><i class="fa-regular fa-calendar"></i> Date:</strong> ${fmtDate(report.date)}
+                    <strong style="color: var(--color-text);"><i class="fa-regular fa-calendar"></i> Date:</strong> ${fmtDate(report.date)}
                 </div>
                 <div style="margin-bottom: 1rem;">
-                    <strong style="color: var(--text-color);"><i class="fa-solid fa-circle-info"></i> Status:</strong> <span style="text-transform: capitalize;">${report.status}</span>
+                    <strong style="color: var(--color-text);"><i class="fa-solid fa-circle-info"></i> Status:</strong> <span style="text-transform: capitalize;">${report.status}</span>
                 </div>
                 <div style="margin-bottom: 1rem;">
-                    <strong style="color: var(--text-color);"><i class="fa-solid fa-align-left"></i> Description:</strong>
-                    <p style="margin-top: 0.5rem; color: var(--text-muted);">${report.desc || 'No description provided.'}</p>
+                    <strong style="color: var(--color-text);"><i class="fa-solid fa-align-left"></i> Description:</strong>
+                    <p style="margin-top: 0.5rem; color: var(--color-text-muted);">${report.desc || 'No description provided.'}</p>
                 </div>
-                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-                    <strong style="color: var(--text-color);"><i class="fa-solid fa-user"></i> Reported by:</strong> ${report.reporter}
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--color-border);">
+                    <strong style="color: var(--color-text);"><i class="fa-solid fa-user"></i> Reported by:</strong> ${report.reporter}
                 </div>
             `;
 

@@ -92,30 +92,46 @@
 
                 <!-- Contact Form -->
                 <div class="form-card" style="margin: 0; max-width: none;">
-                    <form id="contactForm">
+                    <form id="contactForm" novalidate>
                         <div class="fm-row">
                             <div class="fm-group">
                                 <label class="fm-label" for="ctName">Full Name <span class="fm-req">*</span></label>
-                                <input type="text" class="fm-ctrl" id="ctName" placeholder="Your name">
+                                <input type="text" class="fm-ctrl" id="ctName" name="fullName"
+                                       placeholder="Your name" autocomplete="name"
+                                       maxlength="60"
+                                       aria-describedby="errCtName">
+                                <span class="fm-err" id="errCtName" aria-live="polite"></span>
                             </div>
                             <div class="fm-group">
                                 <label class="fm-label" for="ctEmail">Email Address <span class="fm-req">*</span></label>
-                                <input type="email" class="fm-ctrl" id="ctEmail" placeholder="your@email.com">
+                                <input type="email" class="fm-ctrl" id="ctEmail" name="email"
+                                       placeholder="your@email.com" autocomplete="email"
+                                       maxlength="100"
+                                       aria-describedby="errCtEmail">
+                                <span class="fm-err" id="errCtEmail" aria-live="polite"></span>
                             </div>
                         </div>
 
                         <div class="fm-group">
                             <label class="fm-label" for="ctSubject">Subject <span class="fm-req">*</span></label>
-                            <input type="text" class="fm-ctrl" id="ctSubject" placeholder="How can we help you?">
+                            <input type="text" class="fm-ctrl" id="ctSubject" name="subject"
+                                   placeholder="How can we help you?" autocomplete="off"
+                                   minlength="3" maxlength="80"
+                                   aria-describedby="errCtSubject">
+                            <span class="fm-err" id="errCtSubject" aria-live="polite"></span>
                         </div>
 
                         <div class="fm-group">
                             <label class="fm-label" for="ctMessage">Message <span class="fm-req">*</span></label>
-                            <textarea class="fm-ctrl fm-textarea" id="ctMessage" rows="5" placeholder="Write your message here..."></textarea>
+                            <textarea class="fm-ctrl fm-textarea" id="ctMessage" name="message" rows="5"
+                                      placeholder="Write your message here..."
+                                      minlength="10" maxlength="2000"
+                                      aria-describedby="errCtMessage"></textarea>
+                            <span class="fm-err" id="errCtMessage" aria-live="polite"></span>
                         </div>
 
-                        <div class="fm-group mt-1">
-                            <button class="btn btn--primary btn-full" type="button" onclick="alert('Message sent successfully. We will get back to you soon.')">
+                        <div class="fm-group">
+                            <button class="btn btn--primary btn-full" id="contactSubmitBtn" type="button" disabled>
                                 <i class="fa-solid fa-paper-plane"></i> Send Message
                             </button>
                         </div>
@@ -127,6 +143,12 @@
 
     </main>
 
+    <!-- ===== TOAST ===== -->
+    <div class="rpt-toast" id="contactToast" role="alert" aria-live="polite">
+        <i class="fa-solid fa-circle-check"></i>
+        <span class="toast-msg">Message sent! We'll get back to you soon.</span>
+    </div>
+
     <!-- ===== FOOTER ===== -->
     <footer class="footer">
         <div class="container">
@@ -134,6 +156,7 @@
         </div>
     </footer>
 
+    <script src="/js/validation.js"></script>
     <script src="/js/main.js"></script>
 </body>
 </html>
