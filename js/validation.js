@@ -30,9 +30,12 @@ function isValidPhone(value) {
     return /^05[0-9]{8}$/.test(value.trim());
 }
 
-/** Report ID: exactly RPT-YYYY-NNN (e.g. RPT-2026-001). */
+/**
+ * Report ID: a positive integer (the auto-increment id from the database).
+ * Example: 1, 2, 17 …
+ */
 function isValidReportId(value) {
-    return /^RPT-[0-9]{4}-[0-9]{3}$/i.test(value.trim());
+    return /^[1-9][0-9]*$/.test(value.trim());
 }
 
 /** UJ student/staff ID: exactly 7 numeric digits. */

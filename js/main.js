@@ -170,14 +170,14 @@ function initClaimForm() {
     const successEl = document.getElementById('claimSuccessMsg');
     if (!form || !submitBtn) return;
 
-    autoUppercase('cReportId');
+    restrictToDigits('cReportId');
     restrictToDigits('cStudentId');
     restrictToDigits('cPhone');
 
     const FIELDS = [
         {
             id: 'cReportId', errId: 'errCReportId', label: 'Report ID',
-            validate: v => isValidReportId(v) ? '' : 'Report ID must follow this format: RPT-2026-001.'
+            validate: v => isValidReportId(v) ? '' : 'Report ID must be a positive number (e.g. 5).'
         },
         {
             id: 'cName', errId: 'errCName', label: 'Full name',
@@ -203,16 +203,44 @@ function initClaimForm() {
 
     const originalLabel = submitBtn.innerHTML;
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!runFormValidation(FIELDS)) return;
 
         setLoading(submitBtn, true, originalLabel);
 
-        setTimeout(() => {
+        // Combine the extra info (student ID, email, phone, proof) into the
+        // claim message so it is all stored in the database.
+        const studentId = document.getElementById('cStudentId').value.trim();
+        const email = document.getElementById('cEmail').value.trim();
+        const phone = document.getElementById('cPhone').value.trim();
+        const proof = document.getElementById('cProof').value.trim();
+
+        const payload = {
+            report_id: parseInt(document.getElementById('cReportId').value, 10),
+            claimant: document.getElementById('cName').value.trim(),
+            message:
+                `Student/Staff ID: ${studentId}\n` +
+                `Email: ${email}\n` +
+                `Phone: ${phone}\n\n` +
+                `Proof of ownership:\n${proof}`
+        };
+
+        try {
+            const res = await fetch('/api/claims', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Request failed');
+
             form.hidden = true;
             if (successEl) successEl.hidden = false;
-        }, 900);
+        } catch (err) {
+            showPageToast('claimToast', 'Could not submit claim: ' + err.message);
+            setLoading(submitBtn, false, originalLabel);
+        }
     });
 }
 
@@ -240,13 +268,30 @@ function initContactForm() {
 
     const originalLabel = submitBtn.innerHTML;
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!runFormValidation(FIELDS)) return;
 
         setLoading(submitBtn, true, originalLabel);
 
-        setTimeout(() => {
+        // Build the payload to send to the backend.
+        const payload = {
+            name: document.getElementById('ctName').value.trim(),
+            email: document.getElementById('ctEmail').value.trim(),
+            subject: document.getElementById('ctSubject').value.trim(),
+            message: document.getElementById('ctMessage').value.trim()
+        };
+
+        try {
+            const res = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Request failed');
+
+            // Reset the form and show success.
             form.reset();
             FIELDS.forEach(({ id, errId }) => {
                 const el = document.getElementById(id);
@@ -254,10 +299,13 @@ function initContactForm() {
                 if (el) el.classList.remove('is-err', 'is-ok');
                 if (err) err.textContent = '';
             });
-            setLoading(submitBtn, false, originalLabel);
-            submitBtn.disabled = true;
             showPageToast('contactToast', "Message sent! We'll get back to you soon.");
-        }, 900);
+            submitBtn.disabled = true;
+        } catch (err) {
+            showPageToast('contactToast', 'Could not send message: ' + err.message);
+        } finally {
+            setLoading(submitBtn, false, originalLabel);
+        }
     });
 }
 
@@ -372,11 +420,51 @@ function initContactForm() {
         }
     ];
 
-    let ACTIVE_DATA = MOCK_REPORTS;
+    let ACTIVE_DATA = [];
+
+    /* ---- Convert a database row into the shape used by the cards ---- */
+    function mapReportFromAPI(row) {
+        // The DB stores status as 'open' / 'resolved'.
+        // The frontend filters use 'active' / 'claimed' / 'resolved'.
+        const status = row.status === 'open' ? 'active' : row.status;
+
+        // created_at comes back as a full timestamp; we only want the date part.
+        const date = (row.created_at || '').toString().slice(0, 10);
+
+        return {
+            id: row.id,
+            type: row.type,
+            title: row.title,
+            location: row.location || '',
+            date: date,
+            desc: row.description || '',
+            reporter: row.contact || 'Anonymous',
+            status: status
+        };
+    }
+
+    /* ---- Load reports from the backend (falls back to mock data) ---- */
+    async function loadReportsFromAPI() {
+        try {
+            const res = await fetch('/api/reports');
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data)) {
+                ACTIVE_DATA = data.data.map(mapReportFromAPI);
+            } else {
+                ACTIVE_DATA = MOCK_REPORTS;
+            }
+        } catch (err) {
+            console.warn('Could not load reports from API, using mock data.', err);
+            ACTIVE_DATA = MOCK_REPORTS;
+        }
+        renderReports();
+    }
 
     /* ---- Format date as "22 Apr 2026" ---- */
     function fmtDate(dateStr) {
+        if (!dateStr) return '';
         const d = new Date(dateStr + 'T00:00:00');
+        if (isNaN(d.getTime())) return dateStr;
         return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
@@ -626,8 +714,8 @@ function initContactForm() {
             }
         }
 
-        /* Submit */
-        submitBtn?.addEventListener('click', () => {
+        /* Submit — sends the report to the backend via fetch */
+        submitBtn?.addEventListener('click', async () => {
             let valid = true;
             FIELDS.forEach(({ id, errId, label }) => {
                 const el = document.getElementById(id);
@@ -644,23 +732,34 @@ function initContactForm() {
             });
             if (!valid) return;
 
-            /* Build new report and prepend to mock data */
-            const newReport = {
-                id: `RPT-2026-${String(MOCK_REPORTS.length + 1).padStart(3, '0')}`,
+            // Build the payload that matches the backend `reports` table.
+            // The reporter name and contact are joined into the `contact` column.
+            const reporterName = document.getElementById('fRepName').value.trim();
+            const reporterContact = document.getElementById('fRepContact').value.trim();
+            const payload = {
                 type: typeHidden ? typeHidden.value : 'lost',
                 title: document.getElementById('fItemTitle').value.trim(),
+                description: document.getElementById('fItemDesc').value.trim(),
                 location: document.getElementById('fItemLoc').value,
-                date: document.getElementById('fItemDate').value,
-                desc: document.getElementById('fItemDesc').value.trim(),
-                reporter: document.getElementById('fRepName').value.trim(),
-                status: 'active'
+                contact: `${reporterName} (${reporterContact})`
             };
-            MOCK_REPORTS.unshift(newReport);
 
-            closeModal();
-            clearForm();
-            renderReports();
-            showToast('Report submitted successfully!');
+            try {
+                const res = await fetch('/api/reports', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || 'Request failed');
+
+                closeModal();
+                clearForm();
+                await loadReportsFromAPI();   // refresh the grid from the server
+                showToast('Report submitted successfully!');
+            } catch (err) {
+                showToast('Could not submit report: ' + err.message);
+            }
         });
 
         /* Live validation: clear error as user types */
@@ -705,7 +804,8 @@ function initContactForm() {
             if (!btn) return;
 
             const rId = btn.dataset.id;
-            const report = MOCK_REPORTS.find(r => r.id === rId);
+            // IDs from the database are numbers, mock IDs are strings — compare loosely.
+            const report = ACTIVE_DATA.find(r => String(r.id) === String(rId));
             if (!report) return;
 
             // Populate body
@@ -740,8 +840,8 @@ function initContactForm() {
     function initReportsPage() {
         if (!document.getElementById('reportsGrid')) return;
 
-        /* Initial render */
-        renderReports();
+        /* Initial render — load reports from the backend (falls back to mock data) */
+        loadReportsFromAPI();
 
         /* Filters */
         document.querySelectorAll(
