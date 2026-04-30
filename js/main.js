@@ -209,21 +209,14 @@ function initClaimForm() {
 
         setLoading(submitBtn, true, originalLabel);
 
-        // Combine the extra info (student ID, email, phone, proof) into the
-        // claim message so it is all stored in the database.
-        const studentId = document.getElementById('cStudentId').value.trim();
-        const email = document.getElementById('cEmail').value.trim();
-        const phone = document.getElementById('cPhone').value.trim();
-        const proof = document.getElementById('cProof').value.trim();
-
+        // Each field is sent as its own column so the database stays tidy.
         const payload = {
             report_id: parseInt(document.getElementById('cReportId').value, 10),
             claimant: document.getElementById('cName').value.trim(),
-            message:
-                `Student/Staff ID: ${studentId}\n` +
-                `Email: ${email}\n` +
-                `Phone: ${phone}\n\n` +
-                `Proof of ownership:\n${proof}`
+            student_id: document.getElementById('cStudentId').value.trim(),
+            email: document.getElementById('cEmail').value.trim(),
+            phone: document.getElementById('cPhone').value.trim(),
+            message: document.getElementById('cProof').value.trim()
         };
 
         try {
@@ -732,23 +725,28 @@ function initContactForm() {
             });
             if (!valid) return;
 
-            // Build the payload that matches the backend `reports` table.
-            // The reporter name and contact are joined into the `contact` column.
+            // Build a FormData object so we can send both text fields AND
+            // the optional photo file in a single multipart request.
             const reporterName = document.getElementById('fRepName').value.trim();
             const reporterContact = document.getElementById('fRepContact').value.trim();
-            const payload = {
-                type: typeHidden ? typeHidden.value : 'lost',
-                title: document.getElementById('fItemTitle').value.trim(),
-                description: document.getElementById('fItemDesc').value.trim(),
-                location: document.getElementById('fItemLoc').value,
-                contact: `${reporterName} (${reporterContact})`
-            };
+
+            const formData = new FormData();
+            formData.append('type', typeHidden ? typeHidden.value : 'lost');
+            formData.append('title', document.getElementById('fItemTitle').value.trim());
+            formData.append('description', document.getElementById('fItemDesc').value.trim());
+            formData.append('location', document.getElementById('fItemLoc').value);
+            formData.append('contact', `${reporterName} (${reporterContact})`);
+
+            // Attach the photo only if the user picked one.
+            const photoFile = photoInput && photoInput.files && photoInput.files[0];
+            if (photoFile) {
+                formData.append('image', photoFile);
+            }
 
             try {
                 const res = await fetch('/api/reports', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: formData     // browser sets the right Content-Type automatically
                 });
                 const data = await res.json();
                 if (!res.ok || !data.success) throw new Error(data.message || 'Request failed');

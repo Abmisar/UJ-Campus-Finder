@@ -2,12 +2,38 @@
 // Handles lost / found item reports.
 
 const express = require("express");
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
 const router = express.Router();
 const db = require("../db");
 
 // Allowed values for the ENUM columns in the database.
 const VALID_TYPES = ["lost", "found"];
 const VALID_STATUSES = ["open", "resolved"];
+
+// -----------------------------------------------------------------
+// Multer setup — saves uploaded photos to /media/uploads/
+// -----------------------------------------------------------------
+const UPLOAD_DIR = path.join(__dirname, "..", "..", "media", "uploads");
+if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename: (req, file, cb) => {
+        // Generate a unique filename so two uploads never collide.
+        const ext = path.extname(file.originalname).toLowerCase();
+        const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        cb(null, unique + ext);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5 MB max
+});
 
 // -----------------------------------------------------------------
 // GET /api/reports
@@ -48,10 +74,13 @@ router.get("/:id", async (req, res) => {
 // -----------------------------------------------------------------
 // POST /api/reports
 // Create a new lost or found report.
-// Body: { type, title, description, location, image_path, contact }
+// Form-data fields: type, title, description, location, contact, image (optional file)
 // -----------------------------------------------------------------
-router.post("/", async (req, res) => {
-    const { type, title, description, location, image_path, contact } = req.body;
+router.post("/", upload.single("image"), async (req, res) => {
+    const { type, title, description, location, contact } = req.body;
+
+    // If a file was uploaded, store its public URL path.
+    const image_path = req.file ? `/media/uploads/${req.file.filename}` : null;
 
     // Simple validation — all important fields must be present.
     if (!type || !title || !location || !contact) {
@@ -71,12 +100,13 @@ router.post("/", async (req, res) => {
         const [result] = await db.query(
             `INSERT INTO reports (type, title, description, location, image_path, contact)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [type, title, description || null, location, image_path || null, contact]
+            [type, title, description || null, location, image_path, contact]
         );
         res.status(201).json({
             success: true,
             message: "Report submitted successfully",
-            id: result.insertId
+            id: result.insertId,
+            image_path: image_path
         });
     } catch (err) {
         console.error("POST /api/reports error:", err.message);

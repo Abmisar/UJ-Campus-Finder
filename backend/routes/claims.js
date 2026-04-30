@@ -29,10 +29,10 @@ router.get("/", async (req, res) => {
 // -----------------------------------------------------------------
 // POST /api/claims
 // Submit a new claim for a specific report.
-// Body: { report_id, claimant, message }
+// Body: { report_id, claimant, student_id, email, phone, message }
 // -----------------------------------------------------------------
 router.post("/", async (req, res) => {
-    const { report_id, claimant, message } = req.body;
+    const { report_id, claimant, student_id, email, phone, message } = req.body;
 
     if (!report_id || !claimant) {
         return res.status(400).json({
@@ -55,9 +55,17 @@ router.post("/", async (req, res) => {
         }
 
         const [result] = await db.query(
-            `INSERT INTO claim_requests (report_id, claimant, message)
-             VALUES (?, ?, ?)`,
-            [report_id, claimant, message || null]
+            `INSERT INTO claim_requests
+                (report_id, claimant, student_id, email, phone, message)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+                report_id,
+                claimant,
+                student_id || null,
+                email || null,
+                phone || null,
+                message || null
+            ]
         );
         res.status(201).json({
             success: true,
