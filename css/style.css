@@ -453,6 +453,11 @@ main { width: 100%; }
 
 .rpt-modal__body { padding: 1.4rem 1.75rem; display: flex; flex-direction: column; gap: 1.05rem; }
 
+/* Details modal — report image (only shown when image_path exists) */
+.details-image-wrap { width: 100%; margin-bottom: 0.5rem; border-radius: var(--border-radius); overflow: hidden; border: 1px solid var(--color-border); }
+
+.details-image { width: 100%; max-height: 300px; object-fit: cover; display: block; border-radius: var(--border-radius); }
+
 .rpt-modal__ft { padding: 1rem 1.75rem 1.5rem; border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: 0.7rem; }
 
 /* Form */
