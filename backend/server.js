@@ -42,7 +42,7 @@ app.use("/api/claims", claimsRouter);
 
 // ─── 5) Test route ─────────────────────────────────────────────────────────────
 app.get("/api/test", (req, res) => {
-    res.json({ message: "Server is running successfully" });
+    res.json({ success: true, message: "API is working" });
 });
 
 // ─── 6) Start server ───────────────────────────────────────────────────────────
