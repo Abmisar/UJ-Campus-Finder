@@ -1,4 +1,4 @@
-﻿// UJ Campus Finder — Main JS
+// UJ Campus Finder — Main JS
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -425,15 +425,23 @@ function initContactForm() {
         const date = (row.created_at || '').toString().slice(0, 10);
 
         return {
-            id: row.id,
-            type: row.type,
-            title: row.title,
-            location: row.location || '',
-            date: date,
-            desc: row.description || '',
-            reporter: row.contact || 'Anonymous',
-            status: status
+            id:         row.id,
+            type:       row.type,
+            title:      row.title,
+            location:   row.location || '',
+            date:       date,
+            desc:       row.description || '',
+            reporter:   row.contact || 'Anonymous',
+            status:     status,
+            image_path: row.image_path || null   // preserve for the details modal
         };
+    }
+
+    /* ---- Resolve an image path to a safe URL ---- */
+    function resolveImageUrl(src) {
+        if (!src) return '';
+        if (/^https?:\/\//.test(src) || src.startsWith('/')) return src;
+        return '/' + src;
     }
 
     /* ---- Load reports from the backend (falls back to mock data) ---- */
@@ -806,8 +814,22 @@ function initContactForm() {
             const report = ACTIVE_DATA.find(r => String(r.id) === String(rId));
             if (!report) return;
 
+            // Conditional image block — only rendered when image_path is set.
+            const imgUrl = resolveImageUrl(report.image_path);
+            const imageHtml = imgUrl
+                ? `<div class="details-image-wrap" id="detailsImgWrap">
+                       <img
+                           class="details-image"
+                           src="${imgUrl}"
+                           alt="Photo of ${report.title}"
+                           onerror="document.getElementById('detailsImgWrap').style.display='none';"
+                       >
+                   </div>`
+                : '';
+
             // Populate body
             bodyEl.innerHTML = `
+                ${imageHtml}
                 <div style="margin-bottom: 1rem;">
                     <strong style="color: var(--color-text);"><i class="fa-solid fa-tag"></i> Item Name:</strong> ${report.title}
                 </div>
