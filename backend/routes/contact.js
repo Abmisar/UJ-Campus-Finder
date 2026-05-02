@@ -8,8 +8,9 @@ const { Resend } = require("resend");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Very simple email check used as a backend safety net
-// (the frontend has stricter validation as well).
+const VALID_GENDERS   = ['male', 'female', 'prefer_not_to_say'];
+const VALID_LANGUAGES = ['arabic', 'english', 'french'];
+
 function isValidEmail(value) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
 }
@@ -42,16 +43,25 @@ router.get("/", async (req, res) => {
 
 // -----------------------------------------------------------------
 // POST /api/contact
-// Save a new contact / help message, then send a notification email.
-// Body: { name, email, subject, message }
+// Save a new contact message, then send a notification email.
+// Body: { first_name, last_name, gender, mobile, date_of_birth,
+//         language, email, subject, message }
 // -----------------------------------------------------------------
 router.post("/", async (req, res) => {
-    const { name, email, subject, message } = req.body;
+    const first_name    = (req.body.first_name    || '').trim();
+    const last_name     = (req.body.last_name     || '').trim();
+    const gender        = (req.body.gender        || '').trim();
+    const mobile        = (req.body.mobile        || '').trim();
+    const date_of_birth = (req.body.date_of_birth || '').trim();
+    const language      = (req.body.language      || '').trim();
+    const email         = (req.body.email         || '').trim();
+    const subject       = (req.body.subject       || '').trim();
+    const message       = (req.body.message       || '').trim();
 
-    if (!name || !email || !message) {
+    if (!first_name || !last_name || !gender || !mobile || !date_of_birth || !language || !email || !message) {
         return res.status(400).json({
             success: false,
-            message: "name, email and message are required"
+            message: "first_name, last_name, gender, mobile, date_of_birth, language, email, and message are required"
         });
     }
     if (!isValidEmail(email)) {
@@ -60,14 +70,27 @@ router.post("/", async (req, res) => {
             message: "Please provide a valid email address"
         });
     }
+    if (!VALID_GENDERS.includes(gender)) {
+        return res.status(400).json({
+            success: false,
+            message: "gender must be one of: male, female, prefer_not_to_say"
+        });
+    }
+    if (!VALID_LANGUAGES.includes(language)) {
+        return res.status(400).json({
+            success: false,
+            message: "language must be one of: arabic, english, french"
+        });
+    }
 
     // ── Step 1: Save to MySQL ────────────────────────────────────
     let insertId;
     try {
         const [result] = await db.query(
-            `INSERT INTO contact_messages (name, email, subject, message)
-             VALUES (?, ?, ?, ?)`,
-            [name, email, subject || null, message]
+            `INSERT INTO contact_messages
+                (first_name, last_name, gender, mobile, date_of_birth, language, email, subject, message)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [first_name, last_name, gender, mobile, date_of_birth, language, email, subject || null, message]
         );
         insertId = result.insertId;
     } catch (err) {
@@ -89,8 +112,18 @@ router.post("/", async (req, res) => {
                 html: `
                     <h2 style="font-family:sans-serif;color:#004731;">New message from UJ Campus Finder</h2>
                     <table style="font-family:sans-serif;font-size:15px;border-collapse:collapse;width:100%;max-width:540px;">
-                        <tr><td style="padding:8px 0;color:#54676d;width:90px;"><strong>Name</strong></td>
-                            <td style="padding:8px 0;">${esc(name)}</td></tr>
+                        <tr><td style="padding:8px 0;color:#54676d;width:110px;"><strong>First Name</strong></td>
+                            <td style="padding:8px 0;">${esc(first_name)}</td></tr>
+                        <tr><td style="padding:8px 0;color:#54676d;"><strong>Last Name</strong></td>
+                            <td style="padding:8px 0;">${esc(last_name)}</td></tr>
+                        <tr><td style="padding:8px 0;color:#54676d;"><strong>Gender</strong></td>
+                            <td style="padding:8px 0;">${esc(gender)}</td></tr>
+                        <tr><td style="padding:8px 0;color:#54676d;"><strong>Mobile</strong></td>
+                            <td style="padding:8px 0;">${esc(mobile)}</td></tr>
+                        <tr><td style="padding:8px 0;color:#54676d;"><strong>Date of Birth</strong></td>
+                            <td style="padding:8px 0;">${esc(date_of_birth)}</td></tr>
+                        <tr><td style="padding:8px 0;color:#54676d;"><strong>Language</strong></td>
+                            <td style="padding:8px 0;">${esc(language)}</td></tr>
                         <tr><td style="padding:8px 0;color:#54676d;"><strong>Email</strong></td>
                             <td style="padding:8px 0;">${esc(email)}</td></tr>
                         <tr><td style="padding:8px 0;color:#54676d;"><strong>Subject</strong></td>

@@ -43,10 +43,24 @@ function isValidStudentId(value) {
     return /^[0-9]{7}$/.test(value.trim());
 }
 
+/** General mobile number: 7–15 characters, digits, +, spaces, and dashes only. */
+function isValidMobile(value) {
+    return /^[0-9+\s\-]{7,15}$/.test(value.trim());
+}
+
 function isMinLength(value, min) {
     return value.trim().length >= min;
 }
 
 function isMaxLength(value, max) {
     return value.trim().length <= max;
+}
+
+// Allow CommonJS imports in Node.js (for unit tests) without breaking browser globals.
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        isRequired, isValidEmail, isValidUJEmail, isValidName,
+        isValidPhone, isValidMobile, isValidReportId, isValidStudentId,
+        isMinLength, isMaxLength
+    };
 }

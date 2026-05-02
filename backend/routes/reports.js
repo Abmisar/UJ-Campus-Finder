@@ -30,9 +30,21 @@ const storage = multer.diskStorage({
     }
 });
 
+// Only accept common image MIME types — blocks executable/script uploads.
+const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+
+function imageFileFilter(_req, file, cb) {
+    if (ALLOWED_MIME.has(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error("Only image files (JPEG, PNG, GIF, WEBP) are allowed"), false);
+    }
+}
+
 const upload = multer({
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5 MB max
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+    fileFilter: imageFileFilter
 });
 
 // -----------------------------------------------------------------
@@ -76,7 +88,14 @@ router.get("/:id", async (req, res) => {
 // Create a new lost or found report.
 // Form-data fields: type, title, description, location, contact, image (optional file)
 // -----------------------------------------------------------------
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", (req, res, next) => {
+    upload.single("image")(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ success: false, message: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     const { type, title, description, location, contact } = req.body;
 
     // If a file was uploaded, store its public URL path.

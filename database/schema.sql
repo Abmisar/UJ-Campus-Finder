@@ -52,10 +52,15 @@ CREATE TABLE IF NOT EXISTS claim_requests (
 -- Stores messages submitted from the contact page.
 -- -----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS contact_messages (
-    id         INT AUTO_INCREMENT PRIMARY KEY,
-    name       VARCHAR(100) NOT NULL,
-    email      VARCHAR(150) NOT NULL,
-    subject    VARCHAR(200),
-    message    TEXT         NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    first_name    VARCHAR(60)  NOT NULL,
+    last_name     VARCHAR(60)  NOT NULL,
+    gender        VARCHAR(20)  NOT NULL,
+    mobile        VARCHAR(20)  NOT NULL,
+    date_of_birth DATE         NOT NULL,
+    language      VARCHAR(20)  NOT NULL,
+    email         VARCHAR(150) NOT NULL,
+    subject       VARCHAR(200),
+    message       TEXT         NOT NULL,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

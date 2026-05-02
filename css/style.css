@@ -601,3 +601,152 @@ main { width: 100%; }
 .dev-role { font-size: 0.85rem; color: var(--color-primary); font-weight: 700; margin-bottom: 1rem; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
 .dev-bio { color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; flex-grow: 1; }
 .dev-links { width: 100%; }
+
+/* ==========================================================
+   ABOUT-US — Developer table  (Fix: CCSW321 table requirement)
+   ========================================================== */
+.dev-section-title {
+    text-align: center;
+    margin-bottom: 3rem;
+    font-size: 2.2rem;
+    color: var(--color-primary-dark);
+}
+
+.team-table-wrap {
+    overflow-x: auto;
+    margin-top: 3rem;
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+}
+
+.team-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    background: var(--color-card-bg);
+}
+
+.team-table caption {
+    caption-side: top;
+    padding: 1rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--color-primary-dark);
+    background: rgba(0, 71, 49, 0.05);
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    letter-spacing: 0.01em;
+}
+
+.team-table th {
+    background: var(--color-primary-dark);
+    color: #fff;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.team-table td {
+    padding: 0.85rem 1rem;
+    color: var(--color-text);
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+.team-table tbody tr:last-child td { border-bottom: none; }
+
+.team-table tbody tr:hover { background: rgba(0, 168, 107, 0.04); }
+
+.team-table a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.team-table a:hover { color: var(--color-primary-dark); }
+
+/* ==========================================================
+   CONTACT INFO — email link underline
+   (Fix: inline style removed from contact-us.html)
+   ========================================================== */
+.contact-value--link { text-decoration: underline; }
+
+/* ==========================================================
+   CONTACT FORM CARD — full-width override
+   (Fix: inline style removed from contact-us.html)
+   ========================================================== */
+.form-card--contact { margin: 0; max-width: none; }
+
+/* ==========================================================
+   REPORTS PAGE — filter header actions row
+   (Fix: inline style removed from reports.html)
+   ========================================================== */
+.filter-hd-actions { display: flex; gap: 1rem; align-items: center; }
+
+/* Filter chevron is only visible on mobile (JS also controls it) */
+.filter-arrow { display: none; }
+
+/* ==========================================================
+   REPORTS PAGE — details modal body
+   (Fix: inline style removed from reports.html)
+   ========================================================== */
+.details-modal-body { padding: 1.5rem; line-height: 1.6; }
+
+/* ==========================================================
+   MOCK DATA WARNING BANNER
+   (Fix: inline style moved from JS setMockWarning())
+   ========================================================== */
+.mock-data-warning {
+    background: #f59e0b;
+    color: #1c1000;
+    text-align: center;
+    padding: 0.6rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    border-bottom: 2px solid #d97706;
+    letter-spacing: 0.01em;
+}
+
+/* ==========================================================
+   DETAILS MODAL
+   (Fix: inline style removed from main.js)
+   ========================================================== */
+.details-modal-row {
+    margin-bottom: 1rem;
+}
+
+.details-modal-label {
+    color: var(--color-text);
+}
+
+.details-modal-status {
+    text-transform: capitalize;
+}
+
+.details-modal-desc-text {
+    margin-top: 0.5rem;
+    color: var(--color-text-muted);
+}
+
+.details-modal-footer-row {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+}
+
+/* ==========================================================
+   UTILITY CLASSES
+   ========================================================== */
+.d-none { display: none !important; }
+.readonly-input {
+    background-color: var(--color-bg) !important;
+    color: var(--color-text-muted) !important;
+    cursor: not-allowed !important;
+}

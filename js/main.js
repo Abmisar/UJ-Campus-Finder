@@ -245,9 +245,20 @@ function initContactForm() {
 
     const FIELDS = [
         {
-            id: 'ctName', errId: 'errCtName', label: 'Full name',
+            id: 'ctFirstName', errId: 'errCtFirstName', label: 'First name',
             validate: v => isValidName(v) ? '' : 'Name must contain letters only and be between 2 and 60 characters.'
         },
+        {
+            id: 'ctLastName', errId: 'errCtLastName', label: 'Last name',
+            validate: v => isValidName(v) ? '' : 'Name must contain letters only and be between 2 and 60 characters.'
+        },
+        { id: 'ctGender', errId: 'errCtGender', label: 'Gender' },
+        {
+            id: 'ctMobile', errId: 'errCtMobile', label: 'Mobile number',
+            validate: v => isValidMobile(v) ? '' : 'Enter a valid mobile number (7–15 digits, may include +, spaces, dashes).'
+        },
+        { id: 'ctDob', errId: 'errCtDob', label: 'Date of birth' },
+        { id: 'ctLanguage', errId: 'errCtLanguage', label: 'Preferred language' },
         {
             id: 'ctEmail', errId: 'errCtEmail', label: 'Email address',
             validate: v => isValidEmail(v) ? '' : 'Enter a valid email address.'
@@ -267,12 +278,16 @@ function initContactForm() {
 
         setLoading(submitBtn, true, originalLabel);
 
-        // Build the payload to send to the backend.
         const payload = {
-            name: document.getElementById('ctName').value.trim(),
-            email: document.getElementById('ctEmail').value.trim(),
-            subject: document.getElementById('ctSubject').value.trim(),
-            message: document.getElementById('ctMessage').value.trim()
+            first_name:    document.getElementById('ctFirstName').value.trim(),
+            last_name:     document.getElementById('ctLastName').value.trim(),
+            gender:        document.getElementById('ctGender').value,
+            mobile:        document.getElementById('ctMobile').value.trim(),
+            date_of_birth: document.getElementById('ctDob').value,
+            language:      document.getElementById('ctLanguage').value,
+            email:         document.getElementById('ctEmail').value.trim(),
+            subject:       document.getElementById('ctSubject').value.trim(),
+            message:       document.getElementById('ctMessage').value.trim()
         };
 
         try {
@@ -284,7 +299,6 @@ function initContactForm() {
             const data = await res.json();
             if (!res.ok || !data.success) throw new Error(data.message || 'Request failed');
 
-            // Reset the form and show success.
             form.reset();
             FIELDS.forEach(({ id, errId }) => {
                 const el = document.getElementById(id);
@@ -413,7 +427,38 @@ function initContactForm() {
         }
     ];
 
-    let ACTIVE_DATA = [];
+    let ACTIVE_DATA   = [];
+    let usingMockData = false; // true when the API failed and MOCK_REPORTS is the source
+
+    /* ---- Escape HTML special characters to prevent XSS when inserting user data into innerHTML ---- */
+    function escHtml(str) {
+        return String(str ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;');
+    }
+
+    /* ---- Show or hide the "backend unavailable" warning banner ---- */
+    function setMockWarning(visible) {
+        const BANNER_ID = 'mockDataWarning';
+        let banner = document.getElementById(BANNER_ID);
+
+        if (visible) {
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = BANNER_ID;
+                banner.className = 'mock-data-warning';
+                banner.innerHTML = '<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>'
+                    + ' Backend is currently unavailable. Showing sample data only.';
+                document.body.insertBefore(banner, document.body.firstChild);
+            }
+            banner.hidden = false;
+        } else if (banner) {
+            banner.hidden = true;
+        }
+    }
 
     /* ---- Convert a database row into the shape used by the cards ---- */
     function mapReportFromAPI(row) {
@@ -444,20 +489,25 @@ function initContactForm() {
         return '/' + src;
     }
 
-    /* ---- Load reports from the backend (falls back to mock data) ---- */
+    /* ---- Load reports from the backend (falls back to mock data on failure) ---- */
     async function loadReportsFromAPI() {
         try {
             const res = await fetch('/api/reports');
             const data = await res.json();
             if (data.success && Array.isArray(data.data)) {
-                ACTIVE_DATA = data.data.map(mapReportFromAPI);
+                ACTIVE_DATA   = data.data.map(mapReportFromAPI);
+                usingMockData = false;
             } else {
-                ACTIVE_DATA = MOCK_REPORTS;
+                // API responded but returned an unexpected shape — treat as failure.
+                ACTIVE_DATA   = MOCK_REPORTS;
+                usingMockData = true;
             }
         } catch (err) {
             console.warn('Could not load reports from API, using mock data.', err);
-            ACTIVE_DATA = MOCK_REPORTS;
+            ACTIVE_DATA   = MOCK_REPORTS;
+            usingMockData = true;
         }
+        setMockWarning(usingMockData);
         renderReports();
     }
 
@@ -480,35 +530,37 @@ function initContactForm() {
         const statusLabels = { active: 'Active', claimed: 'Claimed', resolved: 'Resolved' };
         const statusPill = `<span class="rcard__status rcard__status--${r.status}">${statusLabels[r.status] || r.status}</span>`;
 
-        const claimBtn = !isLost
-            ? `<a href="claim.html?id=${r.id}" class="rcard-btn rcard-btn--claim"><i class="fa-solid fa-hand"></i> Claim Item</a>`
+        // Claim button only makes sense for real database records.
+        // Mock IDs (e.g. "RPT-2026-001") are not in the database, so suppress the button.
+        const claimBtn = !isLost && !usingMockData
+            ? `<a href="claim.html?id=${encodeURIComponent(r.id)}" class="rcard-btn rcard-btn--claim"><i class="fa-solid fa-hand"></i> Claim Item</a>`
             : '';
 
         return `
-<div class="report-card report-card--${r.type}"
-     data-type="${r.type}"
-     data-loc="${r.location}"
-     data-status="${r.status}"
-     data-date="${r.date}"
-     data-search="${(r.title + ' ' + r.desc + ' ' + r.location + ' ' + r.reporter).toLowerCase()}">
+<div class="report-card report-card--${escHtml(r.type)}"
+     data-type="${escHtml(r.type)}"
+     data-loc="${escHtml(r.location)}"
+     data-status="${escHtml(r.status)}"
+     data-date="${escHtml(r.date)}"
+     data-search="${escHtml((r.title + ' ' + r.desc + ' ' + r.location + ' ' + r.reporter).toLowerCase())}">
     <div class="rcard__strip"></div>
     <div class="rcard__inner">
         <div class="rcard__head">
             <div class="rcard__badges">${typePill}${statusPill}</div>
-            <span class="rcard__id">${r.id}</span>
+            <span class="rcard__id">${escHtml(String(r.id))}</span>
         </div>
         <div class="rcard__body">
-            <h3 class="rcard__title">${r.title}</h3>
+            <h3 class="rcard__title">${escHtml(r.title)}</h3>
             <div class="rcard__meta">
-                <span class="rcard__mi"><i class="fa-solid fa-location-dot"></i> ${r.location}</span>
+                <span class="rcard__mi"><i class="fa-solid fa-location-dot"></i> ${escHtml(r.location)}</span>
                 <span class="rcard__mi"><i class="fa-regular fa-calendar"></i> ${fmtDate(r.date)}</span>
             </div>
-            <p class="rcard__desc">${r.desc}</p>
+            <p class="rcard__desc">${escHtml(r.desc)}</p>
         </div>
         <div class="rcard__foot">
-            <span class="rcard__reporter"><i class="fa-solid fa-circle-user"></i> ${r.reporter}</span>
+            <span class="rcard__reporter"><i class="fa-solid fa-circle-user"></i> ${escHtml(r.reporter)}</span>
             <div class="rcard__actions">
-                <button class="rcard-btn rcard-btn--view" type="button" data-id="${r.id}">
+                <button class="rcard-btn rcard-btn--view" type="button" data-id="${escHtml(String(r.id))}">
                     <i class="fa-solid fa-eye"></i> View Details
                 </button>
                 ${claimBtn}
@@ -569,12 +621,12 @@ function initContactForm() {
 
         if (list.length === 0) {
             grid.innerHTML = '';
-            grid.style.display = 'none';
-            if (emptyEl) emptyEl.style.display = '';
+            grid.classList.add('d-none');
+            if (emptyEl) emptyEl.classList.remove('d-none');
             if (countEl) countEl.innerHTML = 'No reports found';
         } else {
-            grid.style.display = '';
-            if (emptyEl) emptyEl.style.display = 'none';
+            grid.classList.remove('d-none');
+            if (emptyEl) emptyEl.classList.add('d-none');
             grid.innerHTML = list.map(buildCard).join('');
             if (countEl) {
                 countEl.innerHTML = `Showing <strong>${list.length}</strong> report${list.length !== 1 ? 's' : ''}`;
@@ -820,34 +872,34 @@ function initContactForm() {
                 ? `<div class="details-image-wrap" id="detailsImgWrap">
                        <img
                            class="details-image"
-                           src="${imgUrl}"
-                           alt="Photo of ${report.title}"
-                           onerror="document.getElementById('detailsImgWrap').style.display='none';"
+                           src="${escHtml(imgUrl)}"
+                           alt="Photo of ${escHtml(report.title)}"
+                           onerror="document.getElementById('detailsImgWrap').classList.add('d-none');"
                        >
                    </div>`
                 : '';
 
-            // Populate body
+            // Populate body — all user-supplied fields are HTML-escaped to prevent XSS.
             bodyEl.innerHTML = `
                 ${imageHtml}
-                <div style="margin-bottom: 1rem;">
-                    <strong style="color: var(--color-text);"><i class="fa-solid fa-tag"></i> Item Name:</strong> ${report.title}
+                <div class="details-modal-row">
+                    <strong class="details-modal-label"><i class="fa-solid fa-tag"></i> Item Name:</strong> ${escHtml(report.title)}
                 </div>
-                <div style="margin-bottom: 1rem;">
-                    <strong style="color: var(--color-text);"><i class="fa-solid fa-location-dot"></i> Location:</strong> ${report.location}
+                <div class="details-modal-row">
+                    <strong class="details-modal-label"><i class="fa-solid fa-location-dot"></i> Location:</strong> ${escHtml(report.location)}
                 </div>
-                <div style="margin-bottom: 1rem;">
-                    <strong style="color: var(--color-text);"><i class="fa-regular fa-calendar"></i> Date:</strong> ${fmtDate(report.date)}
+                <div class="details-modal-row">
+                    <strong class="details-modal-label"><i class="fa-regular fa-calendar"></i> Date:</strong> ${fmtDate(report.date)}
                 </div>
-                <div style="margin-bottom: 1rem;">
-                    <strong style="color: var(--color-text);"><i class="fa-solid fa-circle-info"></i> Status:</strong> <span style="text-transform: capitalize;">${report.status}</span>
+                <div class="details-modal-row">
+                    <strong class="details-modal-label"><i class="fa-solid fa-circle-info"></i> Status:</strong> <span class="details-modal-status">${escHtml(report.status)}</span>
                 </div>
-                <div style="margin-bottom: 1rem;">
-                    <strong style="color: var(--color-text);"><i class="fa-solid fa-align-left"></i> Description:</strong>
-                    <p style="margin-top: 0.5rem; color: var(--color-text-muted);">${report.desc || 'No description provided.'}</p>
+                <div class="details-modal-row">
+                    <strong class="details-modal-label"><i class="fa-solid fa-align-left"></i> Description:</strong>
+                    <p class="details-modal-desc-text">${report.desc ? escHtml(report.desc) : 'No description provided.'}</p>
                 </div>
-                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--color-border);">
-                    <strong style="color: var(--color-text);"><i class="fa-solid fa-user"></i> Reported by:</strong> ${report.reporter}
+                <div class="details-modal-footer-row">
+                    <strong class="details-modal-label"><i class="fa-solid fa-user"></i> Reported by:</strong> ${escHtml(report.reporter)}
                 </div>
             `;
 
@@ -907,9 +959,7 @@ function initContactForm() {
             if (inputEl) {
                 inputEl.value = reportId;
                 inputEl.setAttribute('readonly', true);
-                inputEl.style.backgroundColor = 'var(--color-bg)';
-                inputEl.style.color = 'var(--color-text-muted)';
-                inputEl.style.cursor = 'not-allowed';
+                inputEl.classList.add('readonly-input');
                 inputEl.dispatchEvent(new Event('input'));
             }
         }
