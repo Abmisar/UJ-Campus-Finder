@@ -23,13 +23,13 @@
                 <i class="fa-solid fa-location-crosshairs"></i>
                 <span>UJ Campus Finder</span>
             </a>
-            <ul class="navbar__links" id="navLinks">
+            <nav><ul class="navbar__links" id="navLinks">
                 <li><a href="../index.html">Home</a></li>
                 <li><a href="reports.html">Reports</a></li>
                 <li><a href="claim.html">Claim</a></li>
                 <li><a href="contact-us.html">Contact</a></li>
                 <li><a href="about-us.html" class="active">About</a></li>
-            </ul>
+            </ul></nav>
             <button class="navbar__toggle" id="navToggle" aria-label="Toggle navigation">
                 <i class="fa-solid fa-bars"></i>
             </button>
@@ -53,8 +53,7 @@
 
         <!-- ===== DEVELOPERS CONTENT ===== -->
         <section class="container page-section">
-            <h2 style="text-align: center; margin-bottom: 3rem; font-size: 2.2rem; color: var(--color-primary-dark);">
-                Meet the Developers</h2>
+            <h2 class="dev-section-title">Meet the Developers</h2>
 
             <div class="dev-grid">
 
@@ -99,6 +98,42 @@
                 </div>
 
             </div>
+
+            <!-- Developer Summary Table (CCSW321 table structure requirement) -->
+            <div class="team-table-wrap">
+                <table class="team-table">
+                    <caption><i class="fa-solid fa-users"></i> Development Team — UJ Campus Finder</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Full Name</th>
+                            <th scope="col">Student ID</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Portfolio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Ibrahim Eissa</td>
+                            <td>2137808</td>
+                            <td>Frontend Developer</td>
+                            <td><a href="https://ibrah1m1.github.io/Ibrah1m1/" target="_blank" rel="noopener noreferrer">Portfolio <i class="fa-solid fa-arrow-up-right-from-square"></i></a></td>
+                        </tr>
+                        <tr>
+                            <td>Ammar Babasit</td>
+                            <td>2342950</td>
+                            <td>Leader / Backend Developer</td>
+                            <td><a href="https://ammarbabaset.dev" target="_blank" rel="noopener noreferrer">Portfolio <i class="fa-solid fa-arrow-up-right-from-square"></i></a></td>
+                        </tr>
+                        <tr>
+                            <td>Abdullah Misar</td>
+                            <td>2123456</td>
+                            <td>Backend Developer</td>
+                            <td><a href="https://www.abmisar.site/" target="_blank" rel="noopener noreferrer">Portfolio <i class="fa-solid fa-arrow-up-right-from-square"></i></a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
         </section>
 
     </main>

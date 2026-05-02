@@ -23,13 +23,13 @@
                 <i class="fa-solid fa-location-crosshairs"></i>
                 <span>UJ Campus Finder</span>
             </a>
-            <ul class="navbar__links" id="navLinks">
+            <nav><ul class="navbar__links" id="navLinks">
                 <li><a href="../index.html">Home</a></li>
                 <li><a href="reports.html" class="active">Reports</a></li>
                 <li><a href="claim.html">Claim</a></li>
                 <li><a href="contact-us.html">Contact</a></li>
                 <li><a href="about-us.html">About</a></li>
-            </ul>
+            </ul></nav>
             <button class="navbar__toggle" id="navToggle" aria-label="Toggle navigation">
                 <i class="fa-solid fa-bars"></i>
             </button>
@@ -149,9 +149,9 @@
                     <aside class="rpt-sidebar">
                         <div class="rpt-sidebar__hd">
                             <span><i class="fa-solid fa-sliders"></i> Filters</span>
-                            <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div class="filter-hd-actions">
                                 <button class="rpt-clear-btn" id="clearFilters" type="button">Clear all</button>
-                                <i class="fa-solid fa-chevron-down filter-arrow" style="display: none;"></i>
+                                <i class="fa-solid fa-chevron-down filter-arrow"></i>
                             </div>
                         </div>
 
@@ -216,7 +216,7 @@
                             <!-- Cards injected by JS -->
                         </div>
 
-                        <div class="rpt-empty" id="rptEmpty" style="display:none">
+                        <div class="rpt-empty d-none" id="rptEmpty">
                             <div class="rpt-empty__ico"><i class="fa-solid fa-folder-open"></i></div>
                             <p class="rpt-empty__txt">No reports match your current filters.</p>
                             <button class="btn btn--outline" id="resetFiltersBtn" type="button">
@@ -343,7 +343,7 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div class="rpt-modal__body" id="detailsModalBody" style="padding: 1.5rem; line-height: 1.6;">
+            <div class="rpt-modal__body details-modal-body" id="detailsModalBody">
                 <!-- Content injected by JS -->
             </div>
             <div class="rpt-modal__ft">
